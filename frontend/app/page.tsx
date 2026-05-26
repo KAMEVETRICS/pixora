@@ -35,7 +35,7 @@ export default function LobbyPage() {
           {/* Hero */}
           <section className="text-center mb-12 animate-fade-in">
             <h1 className="font-display text-4xl md:text-6xl font-bold mb-3">
-              <span className="text-gradient">PicGuess</span>
+              <span className="text-gradient">Pixora</span>
             </h1>
             <p className="text-on-surface-variant text-lg md:text-xl max-w-xl mx-auto mb-6">
               Guess the image. Earn XP. AI judges your guesses on-chain.
