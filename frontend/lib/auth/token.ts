@@ -1,6 +1,6 @@
-import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
-const DEVELOPMENT_JWT_SECRET = randomBytes(32).toString("hex");
+const DEVELOPMENT_JWT_SECRET = "pixora-local-development-secret";
 
 interface TokenPayload {
   address: string;

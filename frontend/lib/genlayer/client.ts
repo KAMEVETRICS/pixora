@@ -23,14 +23,19 @@ export const GENLAYER_NETWORK = {
 // Ethereum provider type from window
 interface EthereumProvider {
   isMetaMask?: boolean;
+  isOkxWallet?: boolean;
+  isRabby?: boolean;
+  providers?: EthereumProvider[];
   request: (args: { method: string; params?: any[] }) => Promise<any>;
-  on: (event: string, handler: (...args: any[]) => void) => void;
-  removeListener: (event: string, handler: (...args: any[]) => void) => void;
+  on?: (event: string, handler: (...args: any[]) => void) => void;
+  removeListener?: (event: string, handler: (...args: any[]) => void) => void;
 }
 
 declare global {
   interface Window {
     ethereum?: EthereumProvider;
+    okxwallet?: EthereumProvider;
+    rabbyWallet?: EthereumProvider;
   }
 }
 
@@ -59,8 +64,7 @@ export function getContractAddress(): string {
   * Check if any EIP-1193 compatible wallet is installed (MetaMask, OKX, Rabby, etc.)
  */
 export function isMetaMaskInstalled(): boolean {
-  if (typeof window === "undefined") return false;
- return !!window.ethereum;
+  return !!getEthereumProvider();
 }
 
 /**
@@ -68,7 +72,24 @@ export function isMetaMaskInstalled(): boolean {
  */
 export function getEthereumProvider(): EthereumProvider | null {
   if (typeof window === "undefined") return null;
-  return window.ethereum || null;
+
+  const injectedProviders = Array.isArray(window.ethereum?.providers)
+    ? window.ethereum.providers
+    : [];
+  const providers = [
+    ...injectedProviders,
+    window.okxwallet,
+    window.rabbyWallet,
+    window.ethereum,
+  ].filter(Boolean) as EthereumProvider[];
+
+  return (
+    providers.find((provider) => provider.isOkxWallet) ||
+    providers.find((provider) => provider.isRabby) ||
+    providers.find((provider) => provider.isMetaMask) ||
+    providers[0] ||
+    null
+  );
 }
 
 /**
@@ -79,7 +100,7 @@ export async function requestAccounts(): Promise<string[]> {
   const provider = getEthereumProvider();
 
   if (!provider) {
-    throw new Error("MetaMask is not installed");
+    throw new Error("No Web3 wallet found");
   }
 
   try {
@@ -91,7 +112,7 @@ export async function requestAccounts(): Promise<string[]> {
     if (error.code === 4001) {
       throw new Error("User rejected the connection request");
     }
-    throw new Error(`Failed to connect to MetaMask: ${error.message}`);
+    throw new Error(`Failed to connect wallet: ${error.message}`);
   }
 }
 
@@ -145,7 +166,7 @@ export async function addGenLayerNetwork(): Promise<void> {
   const provider = getEthereumProvider();
 
   if (!provider) {
-    throw new Error("MetaMask is not installed");
+    throw new Error("No Web3 wallet found");
   }
 
   try {
@@ -168,7 +189,7 @@ export async function switchToGenLayerNetwork(): Promise<void> {
   const provider = getEthereumProvider();
 
   if (!provider) {
-    throw new Error("MetaMask is not installed");
+    throw new Error("No Web3 wallet found");
   }
 
   try {
@@ -209,7 +230,7 @@ export async function isOnGenLayerNetwork(): Promise<boolean> {
  */
 export async function connectMetaMask(): Promise<string> {
   if (!isMetaMaskInstalled()) {
-    throw new Error("MetaMask is not installed");
+    throw new Error("No Web3 wallet found");
   }
 
   // Request accounts
@@ -239,7 +260,7 @@ export async function switchAccount(): Promise<string> {
   const provider = getEthereumProvider();
 
   if (!provider) {
-    throw new Error("MetaMask is not installed");
+    throw new Error("No Web3 wallet found");
   }
 
   try {
