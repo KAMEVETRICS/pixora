@@ -56,11 +56,11 @@ export function getContractAddress(): string {
 }
 
 /**
- * Check if MetaMask is installed
+  * Check if any EIP-1193 compatible wallet is installed (MetaMask, OKX, Rabby, etc.)
  */
 export function isMetaMaskInstalled(): boolean {
   if (typeof window === "undefined") return false;
-  return !!window.ethereum?.isMetaMask;
+ return !!window.ethereum;
 }
 
 /**
