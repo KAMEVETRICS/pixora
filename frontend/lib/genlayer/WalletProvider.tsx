@@ -214,9 +214,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Handle specific error types with appropriate toasts
       if (err.message?.includes("rejected")) {
         userRejected("Connection cancelled");
-      } else if (err.message?.includes("MetaMask is not installed")) {
-        error("MetaMask not found", {
-          description: "Please install MetaMask to connect your wallet.",
+          } else if (err.message?.includes("MetaMask is not installed") || err.message?.includes("wallet")) {
+        error("Wallet not found", {
+          description: "Please install a Web3 wallet (MetaMask, OKX, Rabby, etc.) to connect.",
           action: {
             label: "Install MetaMask",
             onClick: () => window.open("https://metamask.io/download/", "_blank")
