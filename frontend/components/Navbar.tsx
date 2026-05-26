@@ -1,121 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AccountPanel } from "./AccountPanel";
-import { CreateRaffleModal } from "./CreateRaffleModal";
-import { useRaffles } from "@/lib/hooks/useRaffle";
-import { Logo, LogoMark } from "./Logo";
+import { useWallet } from "@/lib/genlayer/wallet";
 
 export function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const { data: raffles } = useRaffles();
+  const { address, connectWallet, disconnectWallet } = useWallet();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const threshold = 80;
-
-      setIsScrolled(scrollY > 20);
-
-      // Calculate progress from 0 to 1 for smoother animations
-      const progress = Math.min(Math.max((scrollY - 10) / threshold, 0), 1);
-      setScrollProgress(progress);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Minimal variant with scroll animations
-  const paddingTop = Math.round(scrollProgress * 16); // 0-16px padding
-  const headerHeight = 64 - Math.round(scrollProgress * 8); // 64px to 56px
-
-  // Only apply border radius on desktop (md breakpoint and up)
-  const getBorderRadius = () => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-      return Math.round(scrollProgress * 9999); // Fully rounded when scrolled on desktop
-    }
-    return 0; // No rounding on mobile
-  };
-  const borderRadius = getBorderRadius();
-
-  const totalRaffles = raffles?.length || 0;
-  const activeRaffles = raffles?.filter(r => !r.is_resolved).length || 0;
-  const resolvedRaffles = raffles?.filter(r => r.is_resolved).length || 0;
+  const truncated = address
+    ? `${address.slice(0, 6)}...${address.slice(-4)}`
+    : "";
 
   return (
-    <header
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out"
-      style={{ paddingTop: `${paddingTop}px` }}
-    >
-      <div
-        className="transition-all duration-500 ease-out"
-        style={{
-          width: '100%',
-          maxWidth: isScrolled ? '80rem' : '100%',
-          margin: '0 auto',
-          borderRadius: `${borderRadius}px`,
-        }}
-      >
-        <div
-          className="backdrop-blur-xl border transition-all duration-500 ease-out md:rounded-none"
-          style={{
-            borderColor: `oklch(0.3 0.02 0 / ${0.4 + scrollProgress * 0.4})`,
-            background: `linear-gradient(135deg, oklch(0.18 0.01 0 / ${0.1 + scrollProgress * 0.3}) 0%, oklch(0.15 0.01 0 / ${0.05 + scrollProgress * 0.25}) 50%, oklch(0.16 0.01 0 / ${0.08 + scrollProgress * 0.27}) 100%)`,
-            borderRadius: `${borderRadius}px`,
-            borderWidth: '1px',
-            borderLeftWidth: isScrolled ? '1px' : '0px',
-            borderRightWidth: isScrolled ? '1px' : '0px',
-            borderTopWidth: isScrolled ? '1px' : '0px',
-            boxShadow: isScrolled
-              ? '0 32px 64px 0 rgba(0, 0, 0, 0.2), inset 0 1px 0 0 oklch(0.3 0.02 0 / 0.3)'
-              : 'none',
-            backdropFilter: 'blur(16px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-          }}
-        >
-          <div
-            className="px-6 transition-all duration-500 mx-auto"
-            style={{
-              maxWidth: isScrolled ? '80rem' : '112rem',
-            }}
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-surface-dim/80 backdrop-blur-xl shadow-[0_0_15px_rgba(208,188,255,0.1)]">
+      <div className="flex justify-between items-center w-full px-6 py-4 max-w-[1280px] mx-auto">
+        <a href="/" className="flex items-center gap-2">
+          <span className="text-2xl">🧠</span>
+          <span className="font-display text-xl font-bold tracking-tighter text-gradient">
+            PicGuess
+          </span>
+        </a>
+
+        <nav className="hidden md:flex gap-6 items-center">
+          <a
+            href="/"
+            className="text-on-surface-variant hover:text-on-surface transition-colors text-sm font-medium"
           >
-            <div
-              className="flex items-center justify-between transition-all duration-500"
-              style={{ height: `${headerHeight}px` }}
+            Lobby
+          </a>
+        </nav>
+
+        <div>
+          {address ? (
+            <button
+              onClick={() => disconnectWallet?.()}
+              className="glass-panel px-4 py-2 rounded-full text-sm font-mono flex items-center gap-2 hover:bg-white/5 transition-colors"
             >
-              {/* Left: Logo */}
-              <div className="flex items-center gap-2">
-                {/* Show mark only on mobile, full logo on desktop */}
-                <div className="md:hidden">
-                  <LogoMark size="md" />
-                </div>
-                <div className="hidden md:block">
-                  <Logo size="md" />
-                </div>
-                <span className="text-base md:text-xl font-bold">Raffle</span>
-              </div>
-
-              {/* Center: Stats */}
-              <div className="hidden md:flex items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Active:</span>
-                  <span className="text-foreground font-bold text-accent">{activeRaffles}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Resolved:</span>
-                  <span className="text-foreground font-bold text-accent">{resolvedRaffles}</span>
-                </div>
-              </div>
-
-              {/* Right: Actions */}
-              <div className="flex items-center gap-3">
-                <CreateRaffleModal />
-                <AccountPanel />
-              </div>
-            </div>
-          </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-on-surface">{truncated}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => connectWallet?.()}
+              className="btn-gradient text-white text-sm font-semibold px-5 py-2 rounded-full hover:scale-105 transition-transform"
+            >
+              Connect Wallet
+            </button>
+          )}
         </div>
       </div>
     </header>

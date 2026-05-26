@@ -3,14 +3,12 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-// Font for body text and UI (Switzer alternative per brand guidelines)
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
 });
 
-// Font for titles (Lineca alternative per brand guidelines)
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
@@ -18,18 +16,17 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "GenLayer Raffle System",
-  description: "AI-powered raffle system on GenLayer blockchain. Create raffles, enter with your reason, and let AI choose the winners.",
+  title: "PicGuess — AI Image Guessing Game",
+  description:
+    "Guess the image. Earn XP. AI judges your guesses on GenLayer blockchain. Compete in rooms and climb the leaderboard.",
   manifest: "/site.webmanifest",
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#9B6AF6", // GenLayer brand purple
+  themeColor: "#0a0a1a",
 };
 
 export default function RootLayout({
@@ -38,11 +35,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body>
-        <Providers>
-          {children}
-        </Providers>
+    <html lang="en" className={`dark ${inter.variable} ${spaceGrotesk.variable}`}>
+      <body className="antialiased min-h-screen bg-grid">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
