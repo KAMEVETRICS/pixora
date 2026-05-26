@@ -15,6 +15,7 @@ import { error, userRejected, warning } from "../utils/toast";
 
 // localStorage key for tracking user's disconnect intent
 const DISCONNECT_FLAG = "wallet_disconnected";
+const TOKEN_KEY = "picguess_session";
 
 export interface WalletState {
   address: string | null;
@@ -248,6 +249,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // This prevents auto-reconnect on page refresh
     if (typeof window !== "undefined") {
       localStorage.setItem(DISCONNECT_FLAG, "true");
+      localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
     }
 
     setState((prev) => ({
