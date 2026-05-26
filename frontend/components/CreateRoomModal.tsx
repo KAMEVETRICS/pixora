@@ -4,6 +4,23 @@ import { useState } from "react";
 import { useCreateRoom } from "@/lib/hooks/useGame";
 import { getRandomImageUrls, IMAGE_CATEGORIES, getDisplayUrl } from "@/lib/utils/unsplash";
 
+const ROOM_NAME_MAX_LENGTH = 32;
+const ROOM_NAME_ALLOWED_CHARS = /[^a-zA-Z0-9 _-]/g;
+
+function cleanRoomName(value: string): string {
+  return value
+    .replace(ROOM_NAME_ALLOWED_CHARS, "")
+    .replace(/\s+/g, " ")
+    .slice(0, ROOM_NAME_MAX_LENGTH);
+}
+
+function clampNumber(value: string, min: number, max: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return min;
+
+  return Math.max(min, Math.min(max, Math.trunc(parsed)));
+}
+
 interface CreateRoomModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,10 +34,14 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: CreateRoomModalP
   const [name, setName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(10);
   const [totalRounds, setTotalRounds] = useState(5);
+  const [totalRoundsInput, setTotalRoundsInput] = useState("5");
   const [teamMode, setTeamMode] = useState(false);
   const [numTeams, setNumTeams] = useState(2);
+  const [numTeamsInput, setNumTeamsInput] = useState("2");
   const [images, setImages] = useState<string[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
+
+  const roomName = name.trim();
 
   const handleAutoFill = async (category?: string) => {
     setLoadingImages(true);
@@ -40,7 +61,7 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: CreateRoomModalP
   const handleCreate = () => {
     createRoom(
       {
-        name,
+        name: roomName,
         maxPlayers,
         numTeams: teamMode ? numTeams : 0,
         totalRounds,
@@ -59,8 +80,10 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: CreateRoomModalP
     setName("");
     setMaxPlayers(10);
     setTotalRounds(5);
+    setTotalRoundsInput("5");
     setTeamMode(false);
     setNumTeams(2);
+    setNumTeamsInput("2");
     setImages([]);
     onClose();
   };
@@ -107,10 +130,15 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: CreateRoomModalP
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  maxLength={ROOM_NAME_MAX_LENGTH}
+                  onChange={(e) => setName(cleanRoomName(e.target.value))}
                   placeholder="Friday Night Guessing"
                   className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
                 />
+                <div className="mt-1 flex justify-between text-[11px] text-on-surface-variant">
+                  <span>Use 3-32 characters: letters, numbers, spaces, - and _</span>
+                  <span>{name.length}/{ROOM_NAME_MAX_LENGTH}</span>
+                </div>
               </div>
 
               <div>
@@ -138,8 +166,24 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: CreateRoomModalP
                   type="number"
                   min={1}
                   max={20}
-                  value={totalRounds}
-                  onChange={(e) => setTotalRounds(Math.max(1, Math.min(20, Number(e.target.value))))}
+                  inputMode="numeric"
+                  value={totalRoundsInput}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => {
+                    const nextValue = e.target.value.replace(/\D/g, "").slice(0, 2);
+                    setTotalRoundsInput(nextValue);
+                    if (nextValue) {
+                      const nextRounds = clampNumber(nextValue, 1, 20);
+                      setTotalRounds(nextRounds);
+                      setImages((prev) => prev.slice(0, nextRounds));
+                    }
+                  }}
+                  onBlur={() => {
+                    const nextRounds = clampNumber(totalRoundsInput, 1, 20);
+                    setTotalRounds(nextRounds);
+                    setTotalRoundsInput(String(nextRounds));
+                    setImages((prev) => prev.slice(0, nextRounds));
+                  }}
                   className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
                 />
               </div>
@@ -174,8 +218,19 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: CreateRoomModalP
                     type="number"
                     min={2}
                     max={10}
-                    value={numTeams}
-                    onChange={(e) => setNumTeams(Math.max(2, Math.min(10, Number(e.target.value))))}
+                    inputMode="numeric"
+                    value={numTeamsInput}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                      const nextValue = e.target.value.replace(/\D/g, "").slice(0, 2);
+                      setNumTeamsInput(nextValue);
+                      if (nextValue) setNumTeams(clampNumber(nextValue, 2, 10));
+                    }}
+                    onBlur={() => {
+                      const nextTeams = clampNumber(numTeamsInput, 2, 10);
+                      setNumTeams(nextTeams);
+                      setNumTeamsInput(String(nextTeams));
+                    }}
                     className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
                   />
                 </div>
@@ -183,7 +238,7 @@ export function CreateRoomModal({ isOpen, onClose, onCreated }: CreateRoomModalP
 
               <button
                 onClick={() => setStep(2)}
-                disabled={!name.trim()}
+                disabled={roomName.length < 3}
                 className="w-full btn-gradient text-white font-bold py-4 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 Next: Choose Images →

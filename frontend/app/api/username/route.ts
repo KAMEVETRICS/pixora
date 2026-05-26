@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 import { verifyMessage } from "viem";
+import { normalizeAddress } from "@/lib/auth/address";
 import { verifyToken } from "@/lib/auth/token";
 
 // Initialize Redis.
 // It will automatically pick up UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN from .env
 const redis = Redis.fromEnv();
+const USERNAME_KEY_PREFIX = "pixora:username:";
+
+function usernameKey(address: `0x${string}`): string {
+  return `${USERNAME_KEY_PREFIX}${address}`;
+}
 
 // Helper to extract and verify session token from Authorization header
 function getSession(req: NextRequest) {
@@ -27,26 +33,44 @@ export async function GET(req: NextRequest) {
   // Batch lookup
   const addresses = searchParams.get("addresses");
   if (addresses) {
-    const list = addresses.split(",").slice(0, 20).map(a => a.trim().toLowerCase());
-    if (list.length === 0) return NextResponse.json({});
+    const requestedAddresses = addresses.split(",").map((a) => a.trim()).filter(Boolean);
+    const list = requestedAddresses.slice(0, 20).map(normalizeAddress);
+
+    if (requestedAddresses.length === 0) return NextResponse.json({});
+    if (list.some((address) => !address)) {
+      return NextResponse.json({ error: "Invalid address" }, { status: 400 });
+    }
 
     // Use mget to fetch all keys at once
-    const values = await redis.mget<string[]>(...list);
+    const normalizedAddresses = list as `0x${string}`[];
+    const values = await redis.mget<(string | null)[]>(
+      ...normalizedAddresses.map(usernameKey)
+    );
+    const missingAddresses = normalizedAddresses.filter((_, i) => !values[i]);
+    const legacyValues = missingAddresses.length
+      ? await redis.mget<(string | null)[]>(...missingAddresses)
+      : [];
+    const legacyByAddress = new Map(
+      missingAddresses.map((address, i) => [address, legacyValues[i]])
+    );
     
     const result: Record<string, string> = {};
-    list.forEach((addr, i) => {
-      if (values[i]) result[addr] = values[i];
+    normalizedAddresses.forEach((addr, i) => {
+      const username = values[i] || legacyByAddress.get(addr);
+      if (username) result[addr] = username;
     });
     return NextResponse.json(result);
   }
 
   // Single lookup
-  const address = searchParams.get("address")?.toLowerCase();
+  const address = normalizeAddress(searchParams.get("address"));
   if (!address) {
-    return NextResponse.json({ error: "address required" }, { status: 400 });
+    return NextResponse.json({ error: "valid address required" }, { status: 400 });
   }
 
-  const username = await redis.get<string>(address);
+  const username =
+    (await redis.get<string>(usernameKey(address))) ||
+    (await redis.get<string>(address));
   return NextResponse.json({ address, username: username || null });
 }
 
@@ -59,7 +83,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const address = body.address?.toLowerCase() as `0x${string}`;
+  const address = normalizeAddress(body.address);
   const username = body.username?.trim();
   const signature = body.signature as `0x${string}`;
 
@@ -91,7 +115,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Store in Redis
-  await redis.set(address, username);
+  await redis.set(usernameKey(address), username);
 
   return NextResponse.json({ address, username });
 }
