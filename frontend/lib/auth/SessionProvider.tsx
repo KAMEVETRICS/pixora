@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { getEthereumProvider } from "@/lib/genlayer/client";
 import { useWallet } from "@/lib/genlayer/wallet";
 
@@ -10,6 +10,7 @@ interface SessionContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   needsUsername: boolean;
+  signIn: (addr?: string) => Promise<void>;
   saveUsername: (name: string) => Promise<void>;
   dismissUsernamePrompt: () => void;
 }
@@ -24,8 +25,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [username, setUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [needsUsername, setNeedsUsername] = useState(false);
+  // Track the last address we attempted restore for, to avoid re-running
+  const lastRestoredAddr = useRef<string | null>(null);
 
-  // Sign in when wallet connects
+  // On wallet connect/reconnect: only RESTORE an existing session, never auto-sign-in.
+  // This prevents the personal_sign popup from appearing on every refresh.
   useEffect(() => {
     if (isWalletLoading) return;
 
@@ -36,7 +40,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Check for existing session
+    // Don't re-run for the same address
+    if (lastRestoredAddr.current === address.toLowerCase()) return;
+    lastRestoredAddr.current = address.toLowerCase();
+
+    // Try to restore existing session from storage
     const stored = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
     if (stored) {
       try {
@@ -45,18 +53,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           localStorage.setItem(TOKEN_KEY, stored);
           sessionStorage.removeItem(TOKEN_KEY);
           setToken(parsed.token);
-          // Fetch username with existing token
           fetchUsername(parsed.token, address);
           return;
         }
       } catch {}
     }
 
-    // No valid session — sign in
-    signIn(address);
+    // No valid stored session — remain unauthenticated.
+    // signIn() must be called explicitly (e.g. after user clicks "Connect Wallet").
   }, [address, isWalletLoading]);
 
-  const signIn = async (addr: string) => {
+  const doSignIn = async (addr: string) => {
     setIsLoading(true);
     try {
       const provider = getEthereumProvider();
@@ -99,6 +106,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(false);
   };
+
+  // Public signIn — uses the provided address or current wallet address
+  const signIn = useCallback(async (addr?: string) => {
+    const target = addr || address;
+    if (!target) return;
+    await doSignIn(target);
+  }, [address]);
 
   const fetchUsername = async (sessionToken: string, addr: string) => {
     try {
@@ -168,6 +182,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!token,
         isLoading,
         needsUsername,
+        signIn,
         saveUsername,
         dismissUsernamePrompt,
       }}

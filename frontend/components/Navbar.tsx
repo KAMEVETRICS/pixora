@@ -1,13 +1,25 @@
 "use client";
 
 import { useWallet } from "@/lib/genlayer/wallet";
+import { useSession } from "@/lib/auth/SessionProvider";
 
 export function Navbar() {
   const { address, connectWallet, disconnectWallet } = useWallet();
+  const { signIn } = useSession();
 
   const truncated = address
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
     : "";
+
+  const handleConnect = async () => {
+    try {
+      const addr = await connectWallet?.();
+      // After wallet connects, sign in to create a session
+      if (addr) await signIn(addr);
+    } catch {
+      // connectWallet already handles error toasts
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-surface-dim/80 backdrop-blur-xl shadow-[0_0_15px_rgba(208,188,255,0.1)]">
@@ -39,7 +51,7 @@ export function Navbar() {
             </button>
           ) : (
             <button
-              onClick={() => connectWallet?.()}
+              onClick={handleConnect}
               className="btn-gradient text-white text-sm font-semibold px-5 py-2 rounded-full hover:scale-105 transition-transform"
             >
               Connect Wallet
@@ -50,3 +62,4 @@ export function Navbar() {
     </header>
   );
 }
+
