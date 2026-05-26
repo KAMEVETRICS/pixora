@@ -37,7 +37,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setToken(null);
       setUsername(null);
       setNeedsUsername(false);
-      lastRestoredAddr.current = null;
       return;
     }
 
