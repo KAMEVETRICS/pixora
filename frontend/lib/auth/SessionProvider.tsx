@@ -58,7 +58,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const provider = (window as any).ethereum;
-      const message = "Sign in to PicGuess";
+      const challengeRes = await fetch(`/api/auth?address=${addr.toLowerCase()}`);
+      if (!challengeRes.ok) {
+        console.error("Failed to create auth challenge");
+        setIsLoading(false);
+        return;
+      }
+
+      const { message, nonce } = await challengeRes.json();
       const signature = await provider.request({
         method: "personal_sign",
         params: [message, addr],
@@ -67,7 +74,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr.toLowerCase(), signature }),
+        body: JSON.stringify({ address: addr.toLowerCase(), signature, nonce }),
       });
 
       if (!res.ok) {
