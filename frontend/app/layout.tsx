@@ -16,7 +16,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "PicGuess — AI Image Guessing Game",
+  title: "Pixora — AI Image Guessing Game",
   description:
     "Guess the image. Earn XP. AI judges your guesses on GenLayer blockchain. Compete in rooms and climb the leaderboard.",
   manifest: "/site.webmanifest",
