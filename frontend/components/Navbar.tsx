@@ -15,7 +15,7 @@ export function Navbar() {
         <a href="/" className="flex items-center gap-2">
           <span className="text-2xl">🧠</span>
           <span className="font-display text-xl font-bold tracking-tighter text-gradient">
-            PicGuess
+            Pixora
           </span>
         </a>
 
