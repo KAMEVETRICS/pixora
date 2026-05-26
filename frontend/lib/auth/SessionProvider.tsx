@@ -33,8 +33,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setToken(null);
       setUsername(null);
       setNeedsUsername(false);
-      localStorage.removeItem(TOKEN_KEY);
-      sessionStorage.removeItem(TOKEN_KEY);
       return;
     }
 
