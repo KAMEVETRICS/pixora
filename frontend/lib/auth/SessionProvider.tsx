@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { getEthereumProvider } from "@/lib/genlayer/client";
 import { useWallet } from "@/lib/genlayer/wallet";
 
 interface SessionContextValue {
@@ -32,16 +33,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setToken(null);
       setUsername(null);
       setNeedsUsername(false);
+      localStorage.removeItem(TOKEN_KEY);
       sessionStorage.removeItem(TOKEN_KEY);
       return;
     }
 
     // Check for existing session
-    const stored = sessionStorage.getItem(TOKEN_KEY);
+    const stored = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         if (parsed.address === address.toLowerCase()) {
+          localStorage.setItem(TOKEN_KEY, stored);
+          sessionStorage.removeItem(TOKEN_KEY);
           setToken(parsed.token);
           // Fetch username with existing token
           fetchUsername(parsed.token, address);
@@ -57,7 +61,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signIn = async (addr: string) => {
     setIsLoading(true);
     try {
-      const provider = (window as any).ethereum;
+      const provider = getEthereumProvider();
+      if (!provider) throw new Error("No Web3 wallet found");
+
       const challengeRes = await fetch(`/api/auth?address=${addr.toLowerCase()}`);
       if (!challengeRes.ok) {
         console.error("Failed to create auth challenge");
@@ -85,7 +91,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       const { token: newToken } = await res.json();
       setToken(newToken);
-      sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ token: newToken, address: addr.toLowerCase() }));
+      localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: newToken, address: addr.toLowerCase() }));
+      sessionStorage.removeItem(TOKEN_KEY);
 
       // Now fetch username
       await fetchUsername(newToken, addr);
@@ -98,7 +105,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const fetchUsername = async (sessionToken: string, addr: string) => {
     try {
       const res = await fetch(`/api/username?address=${addr.toLowerCase()}`, {
-        headers: { Authorization: `Bearer ${sessionToken}` },
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
       });
       if (res.ok) {
         const data = await res.json();
@@ -117,8 +124,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const saveUsername = useCallback(async (name: string) => {
     if (!address || !token) return;
     try {
-      const provider = (window as any).ethereum;
-      const message = `Set PicGuess username to: ${name}`;
+      const provider = getEthereumProvider();
+      if (!provider) throw new Error("No Web3 wallet found");
+
+      const message = `Set Pixora username to: ${name}`;
       const signature = await provider.request({
         method: "personal_sign",
         params: [message, address],

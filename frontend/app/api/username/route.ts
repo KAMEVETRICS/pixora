@@ -20,14 +20,9 @@ function getSession(req: NextRequest) {
   return verifyToken(auth.slice(7));
 }
 
-// GET /api/username?address=0x... — get one username (requires session)
-// GET /api/username?addresses=0x1,0x2,... — batch lookup (requires session, max 20)
+// GET /api/username?address=0x... — get one public display username
+// GET /api/username?addresses=0x1,0x2,... — batch lookup (max 20)
 export async function GET(req: NextRequest) {
-  const session = getSession(req);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { searchParams } = new URL(req.url);
 
   // Batch lookup
@@ -103,7 +98,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Username too long (max 20)" }, { status: 400 });
   }
 
-  const message = `Set PicGuess username to: ${username}`;
+  const message = `Set Pixora username to: ${username}`;
 
   try {
     const valid = await verifyMessage({ address, message, signature });

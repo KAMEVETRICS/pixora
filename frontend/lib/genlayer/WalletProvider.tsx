@@ -167,6 +167,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }));
     };
 
+    if (!provider.on || !provider.removeListener) {
+      return;
+    }
+
     // Add event listeners
     provider.on("accountsChanged", handleAccountsChanged);
     provider.on("chainChanged", handleChainChanged);
@@ -174,9 +178,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     // Cleanup
     return () => {
-      provider.removeListener("accountsChanged", handleAccountsChanged);
-      provider.removeListener("chainChanged", handleChainChanged);
-      provider.removeListener("disconnect", handleDisconnect);
+      provider.removeListener?.("accountsChanged", handleAccountsChanged);
+      provider.removeListener?.("chainChanged", handleChainChanged);
+      provider.removeListener?.("disconnect", handleDisconnect);
     };
   }, []);
 
@@ -214,7 +218,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Handle specific error types with appropriate toasts
       if (err.message?.includes("rejected")) {
         userRejected("Connection cancelled");
-          } else if (err.message?.includes("MetaMask is not installed") || err.message?.includes("wallet")) {
+      } else if (
+        err.message?.includes("No Web3 wallet found") ||
+        err.message?.includes("MetaMask is not installed")
+      ) {
         error("Wallet not found", {
           description: "Please install a Web3 wallet (MetaMask, OKX, Rabby, etc.) to connect.",
           action: {
@@ -224,7 +231,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         });
       } else {
         error("Failed to connect wallet", {
-          description: err.message || "Please check your MetaMask and try again."
+          description: err.message || "Please check your wallet and try again."
         });
       }
 

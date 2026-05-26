@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import ImageGuessingContract from "../contracts/ImageGuessing";
 import { getContractAddress, getStudioUrl } from "../genlayer/client";
 import { useWallet } from "../genlayer/wallet";
+import knownUsernames from "@/data/usernames.json";
 import type {
   Room,
   Player,
@@ -13,6 +14,8 @@ import type {
   RoomPlayer,
   TeamInfo,
 } from "../contracts/types";
+
+const KNOWN_USERNAMES = knownUsernames as Record<string, string>;
 
 // ------------------------------------------------------------------ //
 //  Contract Instance
@@ -317,22 +320,33 @@ export function useEvaluateRound() {
 }
 
 export function useDbUsernames(addresses: string[]) {
-  const queryClient = useQueryClient();
-  const token = typeof window !== "undefined" ? JSON.parse(sessionStorage.getItem("picguess_session") || "{}").token : null;
+  const normalizedAddresses = Array.from(
+    new Set(
+      addresses
+        .map((address) => address.trim().toLowerCase())
+        .filter((address) => address.startsWith("0x"))
+    )
+  );
 
   return useQuery({
-    queryKey: ["dbUsernames", addresses.sort().join(",")],
+    queryKey: ["dbUsernames", [...normalizedAddresses].sort().join(",")],
     queryFn: async () => {
-      if (!addresses.length || !token) return {};
+      if (!normalizedAddresses.length) return KNOWN_USERNAMES;
       
-      const chunked = addresses.slice(0, 20); // API caps at 20
-      const res = await fetch(`/api/username?addresses=${chunked.join(",")}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Failed to fetch usernames");
-      return res.json() as Promise<Record<string, string>>;
+      const chunked = normalizedAddresses.slice(0, 20); // API caps at 20
+      const params = new URLSearchParams({ addresses: chunked.join(",") });
+      try {
+        const res = await fetch(`/api/username?${params}`);
+        if (!res.ok) return KNOWN_USERNAMES;
+
+        const dbUsernames = await res.json() as Record<string, string>;
+        return { ...KNOWN_USERNAMES, ...dbUsernames };
+      } catch {
+        return KNOWN_USERNAMES;
+      }
     },
-    enabled: addresses.length > 0 && !!token,
+    enabled: normalizedAddresses.length > 0,
+    initialData: KNOWN_USERNAMES,
     staleTime: 60000, // cache for 1 min
   });
 }
