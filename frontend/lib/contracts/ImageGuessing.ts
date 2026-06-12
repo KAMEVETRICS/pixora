@@ -1,5 +1,6 @@
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
+import { getEthereumProvider } from "../genlayer/client";
 import type {
   Room,
   Player,
@@ -29,14 +30,30 @@ class ImageGuessingContract {
     if (address) config.account = address as `0x${string}`;
     if (studioUrl) config.endpoint = studioUrl;
 
+    if (typeof window !== "undefined") {
+      const provider = getEthereumProvider();
+      if (provider) {
+        config.provider = provider;
+      }
+    }
+
     this.client = createClient(config);
   }
 
   updateAccount(address: string): void {
-    this.client = createClient({
+    const config: any = {
       chain: studionet,
       account: address as `0x${string}`,
-    });
+    };
+
+    if (typeof window !== "undefined") {
+      const provider = getEthereumProvider();
+      if (provider) {
+        config.provider = provider;
+      }
+    }
+
+    this.client = createClient(config);
   }
 
   // ------------------------------------------------------------------ //
